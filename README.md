@@ -66,3 +66,41 @@ The following summarises **Zone Rush**, as defined in **Section 2 of the officia
 9. **Scoring and winning:** At the end of each turn, every owned cell earns its base points, **doubled if upgraded**. Raid bonuses are added when an opponent's cell is taken. After **80 turns**, the highest total score wins; tied totals share a place. No bot is eliminated during the game.
 
 **Execution limits:** The server calls `act(state)` once per turn. Your code has **200 ms per turn**, except for the **first turn**, which allows **2 seconds**. If a bot crashes, exceeds its time limit, or returns an illegal action, that turn counts as `STAY`.
+
+## Memory between turns: always trust ⁠ state ⁠
+
+### What you can remember
+
+•⁠  ⁠You can use global variables in ⁠ bot.py ⁠ to store information between turns.
+•⁠  ⁠They keep their values for every turn of the same game (80 turns).
+•⁠  ⁠They are cleared when a new game starts, so nothing carries over from one game to the next.
+•⁠  ⁠Store your data in your own global variables, not in ⁠ state ⁠. ⁠ state ⁠ is rebuilt every turn.
+
+### Why ⁠ state ⁠ is always right
+
+The action your bot returns is a *request*. The server decides what actually happens, because only the server sees all four bots' actions at once. Your request may not happen exactly as you expect:
+
+•⁠  ⁠*A move can fail.* Another bot wins the contested cell, or the cell was occupied at the start of the turn. Your bot stays where it was.
+•⁠  ⁠*Late, crashed or illegal responses count as ⁠ STAY ⁠.*
+•⁠  ⁠*A capture or upgrade can fail or be reset*, for example by a rival's ⁠ SHIELD ⁠.
+•⁠  ⁠*Your bot can be frozen* by a rival's ⁠ SHIELD ⁠, or by your own ⁠ SHIELD ⁠ if it catches nobody.
+
+Your bot is *not* told when any of this happens, so your global variables can become wrong. ⁠ state ⁠ is created by the server at the start of every turn, and it always shows the real game.
+
+### What to do every turn
+
+1.⁠ ⁠*Read ⁠ state ⁠ first.* Check where your bot actually is, which cells you own, which are upgraded, and whether you are frozen.
+2.⁠ ⁠*Correct your global variables* wherever they disagree with ⁠ state ⁠.
+3.⁠ ⁠*Then decide your move*, using ⁠ state.legal_actions ⁠.
+
+For example, this finds your bot's actual position:
+
+⁠ python
+def my_position(state):
+    for r in range(8):
+        for c in range(8):
+            if state.board[r][c].occupant == state.bot_id:
+                return r, c
+ ⁠
+
+Useful checks: ⁠ cell.occupant ⁠ (who is on a cell), ⁠ cell.owner ⁠ (who owns it), ⁠ cell.is_upgraded ⁠, ⁠ cell.is_frozen ⁠, and ⁠ state.legal_actions ⁠ (what you are allowed to do this turn).
